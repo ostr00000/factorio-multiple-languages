@@ -1,10 +1,35 @@
 import os
-from configparser import RawConfigParser
+import string
 from pathlib import Path
-from typing import Tuple, Iterable
+from typing import Tuple, Iterable, List
 
 from merged_translation.ignore_section_config_parser import IgnoreSectionConfigParser
 from merged_translation.zip_function import dictZip
+
+
+def filterUnique(values: Iterable[str]) -> List[str]:
+    return list({e: None for e in values}.keys())
+
+
+def filterValueDisplayString(values: List[str]) -> List[str]:
+    if len(values) < 2:
+        return values
+
+    val = values[0]
+    if '__1__' not in val:
+        return values
+
+    asciiNums = []
+    for val in values:
+        asciiNum = sum(1 for v in val if v in string.ascii_letters)
+        if asciiNum > 10:
+            print(f'Not filtered to complicated {values} -> {val}')
+            return values
+        asciiNums.append(asciiNum)
+
+    bestString = asciiNums.index(max(asciiNums))
+    print(f'filtered {values} -> {values[bestString]}')
+    return [values[bestString]]
 
 
 class LocaleMerger:
@@ -51,6 +76,8 @@ class LocaleMerger:
         for sectionName, sections in dictZip(*configs):
             newSection = {}
             for trKey, trValues in dictZip(*sections):
+                trValues = filterUnique(trValues)
+                trValues = filterValueDisplayString(trValues)
                 newSection[trKey] = self.SEPARATOR.join(trValues)
 
             if newSection:
